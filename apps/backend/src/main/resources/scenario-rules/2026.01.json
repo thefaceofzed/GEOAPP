@@ -1,0 +1,109 @@
+{
+  "version": "2026.01",
+  "countries": [
+    {
+      "countryCode": "TW",
+      "countryName": "Taiwan",
+      "spotlight": true,
+      "latitude": 23.6978,
+      "longitude": 120.9605,
+      "actions": [
+        {
+          "key": "blocus_naval",
+          "label": "Naval Blockade",
+          "description": "A maritime choke point constrains Taiwanese exports and reroutes regional shipping.",
+          "replayTitle": "Taiwan Strait Trade Lockdown",
+          "visualIntensity": "critical",
+          "baseSeverity": 0.82,
+          "affectedCountries": ["JP", "DE", "MA"],
+          "narrative": {
+            "headline": "Shipping lanes seize around Taiwan",
+            "summary": "Semiconductor and shipping markets reprice as cargo capacity collapses across the strait."
+          },
+          "assets": [
+            {"key": "oil", "label": "Brent Oil", "unit": "USD", "baseline": 100.0, "delta": 18.0},
+            {"key": "semiconductors", "label": "Semiconductor Index", "unit": "IDX", "baseline": 150.0, "delta": 160.0},
+            {"key": "shipping", "label": "Freight Index", "unit": "IDX", "baseline": 1000.0, "delta": 420.0},
+            {"key": "tse", "label": "TSEC Weighted", "unit": "IDX", "baseline": 17200.0, "delta": -2100.0}
+          ]
+        },
+        {
+          "key": "embargo_tech",
+          "label": "Tech Embargo",
+          "description": "Chipmaking tools and high-end components face a coordinated export embargo.",
+          "replayTitle": "Silicon Supply Chain Squeeze",
+          "visualIntensity": "high",
+          "baseSeverity": 0.76,
+          "affectedCountries": ["US", "KR", "NL"],
+          "narrative": {
+            "headline": "Chip sanctions hit strategic manufacturing",
+            "summary": "Production bottlenecks spread quickly through electronics and automotive supply chains."
+          },
+          "assets": [
+            {"key": "semiconductors", "label": "Semiconductor Index", "unit": "IDX", "baseline": 150.0, "delta": 120.0},
+            {"key": "consumer_electronics", "label": "Consumer Electronics Basket", "unit": "IDX", "baseline": 100.0, "delta": 24.0},
+            {"key": "usd_twd", "label": "USD/TWD", "unit": "FX", "baseline": 31.8, "delta": 1.4},
+            {"key": "tse", "label": "TSEC Weighted", "unit": "IDX", "baseline": 17200.0, "delta": -1450.0}
+          ]
+        },
+        {
+          "key": "cyber_attack",
+          "label": "Cyber Attack",
+          "description": "Critical logistics and financial infrastructure suffer a synchronized cyber disruption.",
+          "replayTitle": "Digital Grid Shockwave",
+          "visualIntensity": "high",
+          "baseSeverity": 0.7,
+          "affectedCountries": ["SG", "JP", "US"],
+          "narrative": {
+            "headline": "Ports and payments buckle under cyber pressure",
+            "summary": "Risk assets sell off as insurers, banks, and ports absorb prolonged digital outages."
+          },
+          "assets": [
+            {"key": "cyber_insurance", "label": "Cyber Insurance Basket", "unit": "IDX", "baseline": 100.0, "delta": 36.0},
+            {"key": "shipping", "label": "Freight Index", "unit": "IDX", "baseline": 1000.0, "delta": 240.0},
+            {"key": "gold", "label": "Gold", "unit": "USD", "baseline": 2200.0, "delta": 110.0},
+            {"key": "tse", "label": "TSEC Weighted", "unit": "IDX", "baseline": 17200.0, "delta": -980.0}
+          ]
+        },
+        {
+          "key": "sanctions_financieres",
+          "label": "Financial Sanctions",
+          "description": "Taiwan-linked financial institutions face settlement restrictions and capital controls.",
+          "replayTitle": "Capital Channels Freeze",
+          "visualIntensity": "medium",
+          "baseSeverity": 0.68,
+          "affectedCountries": ["US", "HK", "SG"],
+          "narrative": {
+            "headline": "Liquidity tightens across Asia-Pacific finance",
+            "summary": "Cross-border settlement frictions push investors toward defensive assets and cash."
+          },
+          "assets": [
+            {"key": "usd_twd", "label": "USD/TWD", "unit": "FX", "baseline": 31.8, "delta": 2.2},
+            {"key": "gold", "label": "Gold", "unit": "USD", "baseline": 2200.0, "delta": 85.0},
+            {"key": "banks_apac", "label": "APAC Banks Basket", "unit": "IDX", "baseline": 100.0, "delta": -18.0},
+            {"key": "tse", "label": "TSEC Weighted", "unit": "IDX", "baseline": 17200.0, "delta": -760.0}
+          ]
+        },
+        {
+          "key": "alliance_energie",
+          "label": "Energy Alliance",
+          "description": "A rapid regional energy pact offsets some of the shock while tightening global supply elsewhere.",
+          "replayTitle": "Emergency Energy Bloc",
+          "visualIntensity": "medium",
+          "baseSeverity": 0.58,
+          "affectedCountries": ["JP", "PH", "AU"],
+          "narrative": {
+            "headline": "Emergency energy pact steadies Taiwan but squeezes global markets",
+            "summary": "Regional resilience improves locally, but new energy routing pushes up costs abroad."
+          },
+          "assets": [
+            {"key": "lng_asia", "label": "Asia LNG", "unit": "USD", "baseline": 14.0, "delta": 3.8},
+            {"key": "oil", "label": "Brent Oil", "unit": "USD", "baseline": 100.0, "delta": 10.0},
+            {"key": "renewables_apac", "label": "APAC Renewables Basket", "unit": "IDX", "baseline": 100.0, "delta": 14.0},
+            {"key": "tse", "label": "TSEC Weighted", "unit": "IDX", "baseline": 17200.0, "delta": 420.0}
+          ]
+        }
+      ]
+    }
+  ]
+}

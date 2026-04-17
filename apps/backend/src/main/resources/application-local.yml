@@ -1,0 +1,9 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5433/geoeconwars
+    username: geoeconwars
+    password: geoeconwars
+
+logging:
+  level:
+    com.geoeconwars: DEBUG

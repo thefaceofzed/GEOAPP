@@ -1,0 +1,78 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:geoeconwars;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+
+app:
+  frontend-url: http://localhost:5173
+  base-url: http://localhost:8080
+  refresh-cookie-secure: false
+  rules-path: missing-test-rules-path
+  access-token-minutes: 30
+  refresh-token-days: 14
+  allowed-origins:
+    - http://localhost:5173
+  quota:
+    guest-lifetime-limit: 3
+    free-daily-limit: 3
+  jwt:
+    access-secret: test-access-secret-123456789012345678901234567890
+    refresh-secret: test-refresh-secret-123456789012345678901234567890
+  stripe:
+    secret-key:
+    webhook-secret:
+    pro-price-id:
+  ingestion:
+    enabled: false
+    schedule-enabled: false
+    bootstrap-on-startup: false
+    max-signals-per-source: 25
+    max-summary-length: 240
+    refresh-interval-ms: 1800000
+    user-agent: GEOECON-WARS-Test/0.1
+    news:
+      enabled: false
+      base-url: https://api.gdeltproject.org/api/v2/doc/doc
+      api-key:
+    commodities:
+      enabled: false
+      base-url: https://stooq.com/q/l/
+      api-key:
+    fx:
+      enabled: false
+      base-url: https://api.frankfurter.app/latest
+      api-key:
+    sanctions:
+      enabled: false
+      base-url: https://www.treasury.gov/ofac/downloads/sdn.xml
+      api-key:
+    macro:
+      enabled: false
+      base-url: https://api.stlouisfed.org/fred/releases/dates
+      api-key:
+    trade:
+      enabled: false
+      base-url: https://api.worldbank.org/v2/country
+      api-key:
+  intelligence:
+    enabled: true
+    stream-enabled: true
+    observed-limit-default: 8
+    observed-limit-max: 20
+    forecast-horizon-days-default: 30
+    forecast-horizon-days-max: 180
+    stream-interval-ms: 15000
+    cache-ttl-ms: 20000
+    max-concurrent-streams: 50
+    max-concurrent-streams-per-client: 3
+    rate-limit:
+      enabled: true
+      requests-per-window: 120
+      window-ms: 60000
