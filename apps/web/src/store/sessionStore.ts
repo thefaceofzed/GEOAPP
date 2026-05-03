@@ -26,7 +26,6 @@ export const useSessionStore = create<SessionState>()(
           profile:
             profile ??
             ({
-              subjectId: session.subjectId,
               subjectType: session.subjectType,
               planTier: session.planTier,
               role: session.role,
@@ -42,7 +41,6 @@ export const useSessionStore = create<SessionState>()(
     {
       name: "geoecon-wars-session",
       partialize: (state) => ({
-        accessToken: state.accessToken,
         profile: state.profile,
       }),
     },

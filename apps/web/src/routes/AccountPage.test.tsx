@@ -6,8 +6,31 @@ import { usePlanetStore } from "../store/planetStore";
 import { useSessionStore } from "../store/sessionStore";
 import * as adminService from "../services/adminService";
 
+vi.mock("../hooks/useWatchlistSync", () => ({
+  useWatchlistSync: () => ({
+    watchlistState: "success",
+    saveWatchlistItem: vi.fn(),
+    removeWatchlistItem: vi.fn(),
+  }),
+}));
+
 vi.mock("../services/billingService", () => ({
   createCheckoutSession: vi.fn(),
+}));
+
+vi.mock("../services/watchlistService", () => ({
+  fetchWatchlistDigest: vi.fn().mockResolvedValue({
+    generatedAt: "2026-01-01T00:00:00.000Z",
+    trackedCount: 0,
+    summary: {
+      attentionCount: 0,
+      watchCount: 0,
+      quietCount: 0,
+      coverageGapCount: 0,
+    },
+    brief: "Watchlist briefing",
+    items: [],
+  }),
 }));
 
 vi.mock("../services/simulationService", () => ({
@@ -90,7 +113,6 @@ describe("AccountPage", () => {
     useSessionStore.setState({
       accessToken: "guest-token",
       profile: {
-        subjectId: "guest-1",
         subjectType: "GUEST",
         planTier: "GUEST",
         role: null,
@@ -107,6 +129,8 @@ describe("AccountPage", () => {
       selectedActionKey: "war",
       activeSimulation: null,
       history: [],
+      comparisonItems: [],
+      watchlist: [],
       guestRunsUsed: 1,
       userRunsByDay: {},
     });
@@ -151,7 +175,6 @@ describe("AccountPage", () => {
     useSessionStore.setState({
       accessToken: "admin-token",
       profile: {
-        subjectId: "admin-1",
         subjectType: "USER",
         planTier: "ADMIN",
         role: "ADMIN",

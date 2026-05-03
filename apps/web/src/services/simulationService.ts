@@ -2,6 +2,7 @@ import { api } from "../lib/api";
 import type {
   ForecastView,
   HistoryItem,
+  IntelligencePostureView,
   ObservedView,
   SimulationView,
 } from "../lib/types";
@@ -49,6 +50,23 @@ export async function fetchForecast(countryCode: string, actionKey: string, hori
     params: {
       countryCode,
       actionKey,
+      horizonDays,
+    },
+  });
+  return data;
+}
+
+export async function fetchIntelligencePosture(
+  countryCode: string,
+  actionKey: string,
+  limit = 8,
+  horizonDays = 30,
+) {
+  const { data } = await api.get<IntelligencePostureView>("/intelligence/posture", {
+    params: {
+      countryCode,
+      actionKey,
+      limit,
       horizonDays,
     },
   });

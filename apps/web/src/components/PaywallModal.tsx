@@ -1,4 +1,6 @@
+import { useTranslation } from "react-i18next";
 import { createCheckoutSession } from "../services/billingService";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 import { useSessionStore } from "../store/sessionStore";
 
 interface PaywallModalProps {
@@ -7,77 +9,58 @@ interface PaywallModalProps {
   onOpenAuth: () => void;
 }
 
-export function PaywallModal({
-  open,
-  onClose,
-  onOpenAuth,
-}: PaywallModalProps) {
+export function PaywallModal({ open, onClose, onOpenAuth }: PaywallModalProps) {
+  const { t } = useTranslation();
   const profile = useSessionStore((state) => state.profile);
+  const trapRef = useFocusTrap(open);
 
-  if (!open) {
-    return null;
-  }
+  if (!open) return null;
 
   async function handleUpgrade() {
     if (!profile || profile.subjectType !== "USER") {
       onOpenAuth();
       return;
     }
-
     const checkout = await createCheckoutSession();
     window.location.assign(checkout.url);
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md">
-      <div className="w-full max-w-lg overflow-hidden rounded-[2rem] border border-white/10 bg-[#09141c] shadow-panel">
-        <div className="bg-[linear-gradient(120deg,rgba(255,94,91,0.2),rgba(125,229,255,0.14))] px-6 py-5">
-          <p className="text-xs uppercase tracking-[0.35em] text-[#ff9a86]">
-            Quota reached
-          </p>
-          <h2 className="mt-2 font-display text-3xl text-white">
-            Keep the planet live
-          </h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 dark:bg-black/60 p-4 backdrop-blur-sm animate-fade-in">
+      <div ref={trapRef} role="dialog" aria-modal="true" aria-labelledby="paywall-modal-title" className="w-full max-w-lg overflow-hidden rounded-panel border border-b-default bg-surface-raised shadow-panel transition-colors animate-panel-enter">
+        <div className="bg-gradient-to-r from-accent/15 via-accent/8 to-transparent px-6 py-5">
+          <p className="text-[10px] uppercase tracking-[0.3em] text-sig-danger font-mono font-medium">{t("paywall.quota_reached")}</p>
+          <h2 id="paywall-modal-title" className="mt-2 font-display text-3xl font-semibold text-t-primary italic">{t("paywall.headline")}</h2>
         </div>
-        <div className="space-y-4 px-6 py-6 text-white/80">
-          <p>
-            Guests get 3 lifetime simulations. Registered free users get 3 per
-            day. Pro removes the cap and keeps your history available.
-          </p>
-          <div className="grid gap-3 rounded-[1.5rem] border border-white/10 bg-white/5 p-4 sm:grid-cols-3">
-            <div>
-              <p className="text-xs uppercase tracking-[0.25em] text-signal/80">
-                Replays
-              </p>
-              <p className="mt-2 text-sm text-white">Public links stay sharable</p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-[0.25em] text-signal/80">
-                History
-              </p>
-              <p className="mt-2 text-sm text-white">Keep prior scenarios ready</p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-[0.25em] text-signal/80">
-                Usage
-              </p>
-              <p className="mt-2 text-sm text-white">Unlimited runs with Pro</p>
-            </div>
+        <div className="space-y-4 px-6 py-6 text-t-secondary">
+          <p className="leading-relaxed">{t("paywall.description")}</p>
+          <div className="grid gap-3 rounded-card border border-b-subtle bg-surface-alt p-4 shadow-card sm:grid-cols-3">
+            {[
+              [t("paywall.replays"), t("paywall.replays_desc")],
+              [t("paywall.history"), t("paywall.history_desc")],
+              [t("paywall.usage"), t("paywall.usage_desc")],
+            ].map(([title, desc]) => (
+              <div key={title}>
+                <p className="text-[10px] uppercase tracking-[0.25em] text-accent font-mono">{title}</p>
+                <p className="mt-1.5 text-sm text-t-primary">{desc}</p>
+              </div>
+            ))}
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
             <button
-              className="flex-1 rounded-full bg-[linear-gradient(120deg,#7de5ff,#ffe170)] px-5 py-3 font-semibold text-slate-950 transition hover:brightness-105"
+              className="flex-1 rounded-btn bg-accent px-5 py-3 font-semibold text-white dark:text-[#080b12] transition hover:brightness-110 hover:shadow-glow-accent"
               onClick={handleUpgrade}
               type="button"
             >
-              {profile?.subjectType === "USER" ? "Go Pro" : "Register To Continue"}
+              {profile?.subjectType === "USER" ? t("paywall.go_pro") : t("paywall.register_continue")}
             </button>
             <button
-              className="rounded-full border border-white/10 px-5 py-3 text-white transition hover:border-white/30"
+              aria-label="Close upgrade dialog"
+              className="rounded-btn border border-b-default px-5 py-3 text-t-secondary transition hover:text-accent hover:border-accent/40"
               onClick={onClose}
               type="button"
             >
-              Maybe later
+              {t("paywall.maybe_later")}
             </button>
           </div>
         </div>

@@ -132,6 +132,37 @@ export interface ReplayHistoryItem {
   note: string;
 }
 
+export interface ComparisonItem {
+  id: string;
+  countryCode: string;
+  countryCode3: string;
+  countryName: string;
+  actionKey: ConflictActionKey;
+  actionLabel: string;
+  createdAt: string;
+  severityScore: number;
+  narrative: NarrativeSummary;
+  assets: AnimatedAsset[];
+  impactsCount: number;
+  replayUrl: string;
+  rulesVersion: string | null;
+  evidenceCount: number;
+  cacheState: "fresh" | "cached" | "local";
+  sourceMode: PlanetSimulation["mode"];
+}
+
+export interface WatchlistItem {
+  id: string;
+  remoteId?: string;
+  countryCode: string;
+  countryCode3: string;
+  countryName: string;
+  actionKey: ConflictActionKey;
+  actionLabel: string;
+  mode: ExperienceMode;
+  createdAt: string;
+}
+
 export interface ConflictActionDefinition {
   key: ConflictActionKey;
   label: string;
@@ -141,4 +172,14 @@ export interface ConflictActionDefinition {
   accentTone: ImpactTone;
   narrativeHint: string;
   backendActionKey?: string;
+}
+
+export interface ScenarioTemplateDefinition {
+  id: string;
+  title: string;
+  description: string;
+  countryCode3: string;
+  actionKey: ConflictActionKey;
+  mode: ExperienceMode;
+  badge: string;
 }

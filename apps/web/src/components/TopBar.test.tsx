@@ -11,7 +11,6 @@ describe("TopBar", () => {
         onAuthOpen={vi.fn()}
         onLogout={handleLogout}
         profile={{
-          subjectId: "user-1",
           subjectType: "USER",
           planTier: "FREE",
           role: "USER",

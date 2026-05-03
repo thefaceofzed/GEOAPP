@@ -5,7 +5,6 @@ export type UserRole = "USER" | "ADMIN";
 export interface AuthResponse {
   accessToken: string;
   subjectType: SubjectType;
-  subjectId: string;
   planTier: PlanTier;
   role: UserRole | null;
   email: string | null;
@@ -14,7 +13,6 @@ export interface AuthResponse {
 }
 
 export interface Profile {
-  subjectId: string;
   subjectType: SubjectType;
   planTier: PlanTier;
   role: UserRole | null;
@@ -111,6 +109,37 @@ export interface ForecastView {
   drivers: ForecastDriver[];
 }
 
+export interface IntelligenceSourceCoverage {
+  label: string;
+  value: string;
+  detail: string;
+  state: "ready" | "partial" | "missing";
+}
+
+export interface IntelligencePostureView {
+  generatedAt: string;
+  countryCode: string;
+  countryName: string;
+  actionKey: string;
+  actionLabel: string;
+  posture: string;
+  postureTone: string;
+  intelligenceScore: number | null;
+  scenarioBaselineScore: number | null;
+  confidenceScore: number | null;
+  evidenceCount: number;
+  signalCount: number;
+  driverCount: number;
+  freshnessLabel: string;
+  riskLabel: string;
+  primaryFinding: string;
+  recommendedAction: string;
+  nextSteps: string[];
+  sourceCoverage: IntelligenceSourceCoverage[];
+  observed: ObservedView;
+  forecast: ForecastView;
+}
+
 export interface HistoryItem {
   simulationId: string;
   replayToken: string | null;
@@ -201,4 +230,49 @@ export interface AdminCacheInvalidationView {
   invalidatedAt: string;
   invalidation: CacheInvalidationResult;
   cache: IntelligenceCacheStatus;
+}
+
+export interface WatchlistEntry {
+  id: string;
+  countryCode: string;
+  countryCode3: string;
+  countryName: string;
+  actionKey: string;
+  actionLabel: string;
+  preferredMode: "observed" | "simulate" | "forecast";
+  createdAt: string;
+}
+
+export interface WatchlistDigestSummary {
+  attentionCount: number;
+  watchCount: number;
+  quietCount: number;
+  coverageGapCount: number;
+}
+
+export interface WatchlistDigestItem {
+  id: string;
+  countryCode: string;
+  countryCode3: string;
+  countryName: string;
+  actionKey: string;
+  actionLabel: string;
+  preferredMode: "observed" | "simulate" | "forecast";
+  createdAt: string;
+  alertState: "attention" | "watch" | "quiet";
+  riskLabel: string;
+  riskScore: number | null;
+  signalCount: number;
+  freshnessLabel: string;
+  confidenceScore: number | null;
+  summary: string;
+  leadDriverLabel: string | null;
+}
+
+export interface WatchlistDigestView {
+  generatedAt: string;
+  trackedCount: number;
+  summary: WatchlistDigestSummary;
+  brief: string;
+  items: WatchlistDigestItem[];
 }

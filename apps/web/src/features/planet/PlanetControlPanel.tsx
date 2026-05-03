@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import type { ForecastView, ObservedView, Profile } from "../../lib/types";
 import type { IntelligenceStreamState } from "../../hooks/useIntelligenceStream";
@@ -33,25 +34,21 @@ interface PlanetControlPanelProps {
   onRunSimulation: () => void;
   onCopyReplay: () => void;
   onOpenReplay: () => void;
+  watchingSelection: boolean;
+  onToggleWatchlist: () => void;
 }
 
 function quotaLabel(quota: QuotaSnapshot) {
-  if (quota.unlimited) {
-    return "Unlimited";
-  }
+  if (quota.unlimited) return "Unlimited";
   return `${quota.simulationsRemaining ?? 0} run(s) left`;
 }
 
 function modeDescription(mode: ExperienceMode) {
   switch (mode) {
-    case "observed":
-      return "Live signals only. No synthetic outcome.";
-    case "simulate":
-      return "Deterministic scenario engine with replay.";
-    case "forecast":
-      return "Explainable forward-looking risk estimate.";
-    default:
-      return "";
+    case "observed": return "Live signals only. No synthetic outcome.";
+    case "simulate": return "Deterministic scenario engine with replay.";
+    case "forecast": return "Explainable forward-looking risk estimate.";
+    default: return "";
   }
 }
 
@@ -77,35 +74,42 @@ export function PlanetControlPanel({
   onRunSimulation,
   onCopyReplay,
   onOpenReplay,
+  watchingSelection,
+  onToggleWatchlist,
 }: PlanetControlPanelProps) {
+  const [localSearch, setLocalSearch] = useState(searchValue);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    setLocalSearch(searchValue);
+  }, [searchValue]);
+
+  function handleLocalSearchChange(value: string) {
+    setLocalSearch(value);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => onSearchChange(value), 250);
+  }
+
   const streamLabel =
-    streamState === "open"
-      ? "Live stream connected"
-      : streamState === "connecting"
-        ? "Connecting live stream"
-        : streamState === "error"
-          ? "Live stream unavailable"
-          : "Snapshot mode";
+    streamState === "open" ? "Live stream connected"
+    : streamState === "connecting" ? "Connecting live stream"
+    : streamState === "error" ? "Live stream unavailable"
+    : "Snapshot mode";
 
   return (
-    <aside className="space-y-4 rounded-[2rem] border border-white/10 bg-black/35 p-4 backdrop-blur-xl lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto">
-      <section className="rounded-[1.6rem] border border-white/10 bg-white/5 p-4">
-        <p className="text-xs uppercase tracking-[0.35em] text-cyan-200/70">
-          Product mode
-        </p>
+    <aside className="space-y-4 rounded-panel border border-b-default bg-surface p-4 backdrop-blur-panel lg:sticky lg:top-6 lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto transition-colors duration-300 shadow-panel">
+      <section aria-labelledby="section-product-mode" className="rounded-panel border border-b-subtle bg-surface-alt p-4 shadow-card">
+        <p id="section-product-mode" className="text-[10px] uppercase tracking-[0.3em] text-accent font-mono font-medium">Product mode</p>
         <div className="mt-3 grid grid-cols-3 gap-2">
-          {([
-            ["observed", "Observed"],
-            ["simulate", "Simulate"],
-            ["forecast", "Forecast"],
-          ] as const).map(([mode, label]) => {
+          {([["observed", "Observed"], ["simulate", "Simulate"], ["forecast", "Forecast"]] as const).map(([mode, label]) => {
             const active = mode === experienceMode;
             return (
               <button
-                className={`rounded-[1.1rem] border px-3 py-3 text-sm transition ${
+                aria-label={`Switch to ${label} mode`}
+                className={`rounded-card border px-3 py-3 text-sm transition ${
                   active
-                    ? "border-cyan-300/50 bg-cyan-200/12 text-white"
-                    : "border-white/10 bg-[#08131d] text-white/72 hover:border-white/20 hover:text-white"
+                    ? "border-accent/45 bg-accent-soft text-t-primary"
+                    : "border-b-subtle bg-surface-raised text-t-secondary hover:border-b-default hover:text-t-primary"
                 }`}
                 key={mode}
                 onClick={() => onModeChange(mode)}
@@ -116,26 +120,26 @@ export function PlanetControlPanel({
             );
           })}
         </div>
-        <p className="mt-3 text-sm text-white/60">{modeDescription(experienceMode)}</p>
-        <div className="mt-3 rounded-[1rem] border border-white/10 bg-[#08131d] px-3 py-2 text-xs text-white/58">
+        <p className="mt-3 text-sm text-t-secondary">{modeDescription(experienceMode)}</p>
+        <div className="mt-3 rounded-card border border-b-subtle bg-surface-raised px-3 py-2 text-xs text-t-tertiary shadow-raised">
           {streamLabel}
         </div>
       </section>
 
-      <section className="rounded-[1.6rem] border border-white/10 bg-white/5 p-4">
-        <p className="text-xs uppercase tracking-[0.35em] text-cyan-200/70">
-          Country target
-        </p>
+      <section aria-labelledby="section-country-target" className="rounded-panel border border-b-subtle bg-surface-alt p-4 shadow-card">
+        <p id="section-country-target" className="text-[10px] uppercase tracking-[0.3em] text-accent font-mono font-medium">Country target</p>
         <div className="mt-3 flex gap-2">
           <input
-            className="flex-1 rounded-[1.2rem] border border-white/10 bg-[#0a1420] px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-cyan-300/60"
+            aria-label="Search for a country"
+            className="flex-1 rounded-card border border-b-default bg-surface-raised px-4 py-3 text-sm text-t-primary outline-none transition placeholder:text-t-tertiary focus:border-accent"
             list="country-directory"
-            onChange={(event) => onSearchChange(event.target.value)}
+            onChange={(event) => handleLocalSearchChange(event.target.value)}
             placeholder="Jump to any country"
-            value={searchValue}
+            value={localSearch}
           />
           <button
-            className="rounded-[1.2rem] border border-white/10 px-4 py-3 text-sm text-white/85 transition hover:border-cyan-300/60 hover:text-white"
+            aria-label="Focus on selected country"
+            className="rounded-card border border-b-subtle px-4 py-3 text-sm text-t-secondary transition hover:border-accent hover:text-t-primary"
             onClick={onSearchConfirm}
             type="button"
           >
@@ -144,47 +148,45 @@ export function PlanetControlPanel({
         </div>
         <datalist id="country-directory">
           {countrySearchIndex.map((country) => (
-            <option key={country.code3} value={country.value}>
-              {country.region}
-            </option>
+            <option key={country.code3} value={country.value}>{country.region}</option>
           ))}
         </datalist>
 
-        <div className="mt-4 rounded-[1.4rem] border border-white/10 bg-[#07111b] p-4">
+        <div className="mt-4 rounded-card border border-b-subtle bg-surface-raised p-4 shadow-raised">
           {selectedCountry ? (
             <>
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.3em] text-white/45">
-                    Selected country
-                  </p>
-                  <h2 className="mt-2 font-display text-3xl text-white">
-                    {selectedCountry.name}
-                  </h2>
+                  <p className="text-[10px] uppercase tracking-widest text-t-tertiary font-mono">Selected country</p>
+                  <h2 className="mt-2 font-display text-3xl font-semibold text-t-primary italic">{selectedCountry.name}</h2>
                 </div>
-                <div className="rounded-full border border-white/10 px-3 py-1 text-sm text-white/75">
-                  {selectedCountry.cca2}
-                </div>
+                <div className="rounded-full border border-b-subtle px-3 py-1 text-sm font-mono text-t-secondary">{selectedCountry.cca2}</div>
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-[1.2rem] border border-white/10 bg-white/5 p-3">
-                  <p className="text-xs uppercase tracking-[0.3em] text-white/40">
-                    Region
-                  </p>
-                  <p className="mt-2 text-sm text-white/80">{selectedCountry.region}</p>
+                <div className="rounded-card border border-b-subtle bg-surface-alt p-3 shadow-raised">
+                  <p className="text-[10px] uppercase tracking-widest text-t-tertiary font-mono">Region</p>
+                  <p className="mt-2 text-sm text-t-secondary">{selectedCountry.region}</p>
                 </div>
-                <div className="rounded-[1.2rem] border border-white/10 bg-white/5 p-3">
-                  <p className="text-xs uppercase tracking-[0.3em] text-white/40">
-                    Capital
-                  </p>
-                  <p className="mt-2 text-sm text-white/80">
-                    {selectedCountry.capital ?? "N/A"}
-                  </p>
+                <div className="rounded-card border border-b-subtle bg-surface-alt p-3 shadow-raised">
+                  <p className="text-[10px] uppercase tracking-widest text-t-tertiary font-mono">Capital</p>
+                  <p className="mt-2 text-sm text-t-secondary">{selectedCountry.capital ?? "N/A"}</p>
                 </div>
               </div>
+              <button
+                aria-label={watchingSelection ? "Remove country from watchlist" : "Save country to watchlist"}
+                className={`mt-4 rounded-full px-4 py-3 text-sm transition ${
+                  watchingSelection
+                    ? "border border-accent/35 bg-accent-soft text-accent"
+                    : "border border-b-subtle bg-surface-alt text-t-secondary hover:border-b-default hover:text-t-primary"
+                }`}
+                onClick={onToggleWatchlist}
+                type="button"
+              >
+                {watchingSelection ? "Remove from watchlist" : "Save to watchlist"}
+              </button>
             </>
           ) : (
-            <div className="space-y-2 text-sm text-white/65">
+            <div className="space-y-2 text-sm text-t-secondary">
               <p>Click a country on the planet or jump to it from search.</p>
               <p>The panel rebuilds around that selection for live, simulated, and forecast views.</p>
             </div>
@@ -192,15 +194,13 @@ export function PlanetControlPanel({
         </div>
       </section>
 
-      <section className="rounded-[1.6rem] border border-white/10 bg-white/5 p-4">
+      <section aria-labelledby="section-scenario-class" className="rounded-panel border border-b-subtle bg-surface-alt p-4 shadow-card">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-cyan-200/70">
-              Scenario class
-            </p>
-            <h2 className="mt-2 font-display text-2xl text-white">Action surface</h2>
+            <p id="section-scenario-class" className="text-[10px] uppercase tracking-[0.3em] text-accent font-mono font-medium">Scenario class</p>
+            <h2 className="mt-2 font-display text-xl font-semibold text-t-primary italic">Action surface</h2>
           </div>
-          <div className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-white/65">
+          <div className="rounded-full border border-b-subtle px-3 py-1 text-[10px] uppercase tracking-widest text-t-tertiary font-mono">
             {quotaLabel(quota)}
           </div>
         </div>
@@ -211,10 +211,10 @@ export function PlanetControlPanel({
             const tone = tonePalette[action.accentTone];
             return (
               <button
-                className={`rounded-[1.4rem] border px-4 py-4 text-left transition ${
+                className={`rounded-card border px-4 py-4 text-left transition ${
                   active
-                    ? "border-white/20 bg-white/10"
-                    : "border-white/10 bg-[#08131d] hover:border-white/20 hover:bg-white/8"
+                    ? "border-b-default bg-surface-alt"
+                    : "border-b-subtle bg-surface-raised hover:border-b-default hover:bg-surface-alt"
                 }`}
                 key={action.key}
                 onClick={() => onSelectAction(action.key)}
@@ -222,16 +222,12 @@ export function PlanetControlPanel({
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-lg font-semibold text-white">{action.label}</p>
-                    <p className="mt-2 text-sm text-white/66">{action.description}</p>
+                    <p className="text-lg font-semibold text-t-primary">{action.label}</p>
+                    <p className="mt-2 text-sm text-t-secondary">{action.description}</p>
                   </div>
                   <span
-                    className="rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.2em]"
-                    style={{
-                      borderColor: tone.borderColor,
-                      color: tone.color,
-                      backgroundColor: tone.softColor,
-                    }}
+                    className="rounded-full border px-3 py-1 text-[11px] uppercase tracking-widest font-mono"
+                    style={{ borderColor: tone.borderColor, color: tone.color, backgroundColor: tone.softColor }}
                   >
                     {action.shortLabel}
                   </span>
@@ -241,53 +237,51 @@ export function PlanetControlPanel({
           })}
         </div>
 
-        {experienceMode === "simulate" ? (
+        {experienceMode === "simulate" && (
           <button
-            className="mt-4 w-full rounded-[1.4rem] bg-[linear-gradient(120deg,#7de5ff,#ffe170)] px-5 py-4 text-sm font-semibold text-slate-950 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+            aria-label={busy ? "Simulation running" : "Run scenario simulation"}
+            aria-busy={busy}
+            className="mt-4 w-full rounded-card bg-[linear-gradient(120deg,#7de5ff,#ffe170)] px-5 py-4 text-sm font-semibold text-slate-950 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={!selectedCountry || busy}
             onClick={onRunSimulation}
             type="button"
           >
             {busy ? "Running simulation..." : "Run scenario"}
           </button>
-        ) : null}
+        )}
 
-        {statusMessage ? (
-          <div className="mt-4 rounded-[1.3rem] border border-white/10 bg-[#08111a] px-4 py-3 text-sm text-white/78">
+        {statusMessage && (
+          <div role="status" aria-live="polite" className="mt-4 rounded-card border border-b-subtle bg-surface-raised px-4 py-3 text-sm text-t-secondary shadow-raised">
             {statusMessage}
           </div>
-        ) : null}
+        )}
       </section>
 
-      {experienceMode === "observed" ? (
-        <section className="rounded-[1.6rem] border border-white/10 bg-white/5 p-4">
-          <p className="text-xs uppercase tracking-[0.35em] text-cyan-200/70">
-            Observed
-          </p>
-          <h2 className="mt-2 font-display text-2xl text-white">Live signal feed</h2>
+      {experienceMode === "observed" && (
+        <section className="rounded-panel border border-b-subtle bg-surface-alt p-4 shadow-card">
+          <p className="text-[10px] uppercase tracking-[0.3em] text-accent font-mono font-medium">Observed</p>
+          <h2 className="mt-2 font-display text-xl font-semibold text-t-primary italic">Live signal feed</h2>
           {observedLoading ? (
-            <p className="mt-3 text-sm text-white/60">Loading live signals...</p>
+            <p role="status" className="mt-3 text-sm text-t-secondary">Loading live signals...</p>
           ) : observed?.signals.length ? (
             <div className="mt-4 space-y-3">
-              <div className="rounded-[1.2rem] border border-white/10 bg-[#07111b] p-3 text-sm text-white/70">
+              <div className="rounded-card border border-b-subtle bg-surface-raised p-3 text-sm text-t-secondary shadow-raised">
                 {observed.signalCount} signal(s) matched to the selected country and scenario.
               </div>
               {observed.signals.slice(0, 5).map((signal) => (
                 <a
-                  className="block rounded-[1.3rem] border border-white/10 bg-[#08131d] p-4 transition hover:border-white/20 hover:bg-white/5"
+                  className="block rounded-card border border-b-subtle bg-surface-raised p-4 transition hover:border-b-default hover:bg-surface-alt shadow-raised"
                   href={signal.url}
                   key={signal.rawReferenceId}
                   rel="noreferrer"
                   target="_blank"
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-white">{signal.sourceName}</p>
-                    <span className="text-xs uppercase tracking-[0.2em] text-white/45">
-                      {signal.signalType}
-                    </span>
+                    <p className="text-sm font-semibold text-t-primary">{signal.sourceName}</p>
+                    <span className="text-[10px] uppercase tracking-widest text-t-tertiary font-mono">{signal.signalType}</span>
                   </div>
-                  <p className="mt-2 text-sm text-white/72">{signal.extractedSummary}</p>
-                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-white/45">
+                  <p className="mt-2 text-sm text-t-secondary">{signal.extractedSummary}</p>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-t-tertiary font-mono">
                     <span>Severity {Math.round(signal.severityScore)}/100</span>
                     <span>Confidence {Math.round(signal.confidenceScore)}/100</span>
                     <span>{new Date(signal.publishedAt).toLocaleString()}</span>
@@ -296,122 +290,99 @@ export function PlanetControlPanel({
               ))}
             </div>
           ) : (
-            <p className="mt-3 text-sm text-white/60">
-              No strong live signal is currently mapped for this selection.
-            </p>
+            <p className="mt-3 text-sm text-t-secondary">No strong live signal is currently mapped for this selection.</p>
           )}
         </section>
-      ) : null}
+      )}
 
-      {experienceMode === "forecast" ? (
-        <section className="rounded-[1.6rem] border border-white/10 bg-white/5 p-4">
-          <p className="text-xs uppercase tracking-[0.35em] text-cyan-200/70">
-            Forecast
-          </p>
-          <h2 className="mt-2 font-display text-2xl text-white">Forward risk</h2>
+      {experienceMode === "forecast" && (
+        <section className="rounded-panel border border-b-subtle bg-surface-alt p-4 shadow-card">
+          <p className="text-[10px] uppercase tracking-[0.3em] text-accent font-mono font-medium">Forecast</p>
+          <h2 className="mt-2 font-display text-xl font-semibold text-t-primary italic">Forward risk</h2>
           {forecastLoading ? (
-            <p className="mt-3 text-sm text-white/60">Computing forecast...</p>
+            <p role="status" className="mt-3 text-sm text-t-secondary">Computing forecast...</p>
           ) : forecast ? (
             <div className="mt-4 space-y-4">
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-[1.2rem] border border-white/10 bg-[#07111b] p-3">
-                  <p className="text-xs uppercase tracking-[0.3em] text-white/40">Risk</p>
-                  <p className="mt-2 text-2xl text-white">{Math.round(forecast.riskScore)}/100</p>
-                  <p className="mt-1 text-sm text-white/60">{forecast.riskLabel}</p>
+                <div className="rounded-card border border-b-subtle bg-surface-raised p-3 shadow-raised">
+                  <p className="text-[10px] uppercase tracking-widest text-t-tertiary font-mono">Risk</p>
+                  <p className="mt-2 text-2xl font-mono text-t-primary">{Math.round(forecast.riskScore)}/100</p>
+                  <p className="mt-1 text-sm text-t-secondary">{forecast.riskLabel}</p>
                 </div>
-                <div className="rounded-[1.2rem] border border-white/10 bg-[#07111b] p-3">
-                  <p className="text-xs uppercase tracking-[0.3em] text-white/40">Confidence</p>
-                  <p className="mt-2 text-2xl text-white">
-                    {Math.round(forecast.confidenceScore)}/100
-                  </p>
-                  <p className="mt-1 text-sm text-white/60">{forecast.horizonDays} day horizon</p>
+                <div className="rounded-card border border-b-subtle bg-surface-raised p-3 shadow-raised">
+                  <p className="text-[10px] uppercase tracking-widest text-t-tertiary font-mono">Confidence</p>
+                  <p className="mt-2 text-2xl font-mono text-t-primary">{Math.round(forecast.confidenceScore)}/100</p>
+                  <p className="mt-1 text-sm text-t-secondary">{forecast.horizonDays} day horizon</p>
                 </div>
               </div>
-              <div className="rounded-[1.2rem] border border-white/10 bg-[#08131d] p-4 text-sm text-white/72">
+              <div className="rounded-card border border-b-subtle bg-surface-raised p-4 text-sm text-t-secondary shadow-raised">
                 {forecast.summary}
               </div>
               <div className="space-y-3">
                 {forecast.drivers.map((driver) => (
-                  <div
-                    className="rounded-[1.2rem] border border-white/10 bg-[#08131d] p-4"
-                    key={driver.factorKey}
-                  >
+                  <div className="rounded-card border border-b-subtle bg-surface-raised p-4 shadow-raised" key={driver.factorKey}>
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-semibold text-white">{driver.label}</p>
-                      <span className="text-xs uppercase tracking-[0.2em] text-white/45">
-                        Weight {Math.round(driver.weight * 100)}
-                      </span>
+                      <p className="text-sm font-semibold text-t-primary">{driver.label}</p>
+                      <span className="text-[10px] uppercase tracking-widest text-t-tertiary font-mono">Weight {Math.round(driver.weight * 100)}</span>
                     </div>
-                    <p className="mt-2 text-sm text-white/70">{driver.explanation}</p>
+                    <p className="mt-2 text-sm text-t-secondary">{driver.explanation}</p>
                   </div>
                 ))}
               </div>
             </div>
           ) : (
-            <p className="mt-3 text-sm text-white/60">
-              Forecast becomes available once the selected country has enough relevant live signals.
-            </p>
+            <p className="mt-3 text-sm text-t-secondary">Forecast becomes available once the selected country has enough relevant live signals.</p>
           )}
         </section>
-      ) : null}
+      )}
 
-      <section className="rounded-[1.6rem] border border-white/10 bg-white/5 p-4">
+      <section className="rounded-panel border border-b-subtle bg-surface-alt p-4 shadow-card">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-cyan-200/70">
-              Session state
-            </p>
-            <h2 className="mt-2 font-display text-2xl text-white">
-              {profile?.planTier ?? "Guest"}
-            </h2>
+            <p className="text-[10px] uppercase tracking-[0.3em] text-accent font-mono font-medium">Session state</p>
+            <h2 className="mt-2 font-display text-xl font-semibold text-t-primary italic">{profile?.planTier ?? "Guest"}</h2>
           </div>
           <Link
-            className="rounded-full border border-white/10 px-3 py-2 text-sm text-white/75 transition hover:border-white/25 hover:text-white"
+            className="rounded-full border border-b-subtle px-3 py-2 text-sm text-t-secondary transition hover:border-b-default hover:text-t-primary"
             to="/account"
           >
             Account
           </Link>
         </div>
-        <p className="mt-3 text-sm text-white/65">
+        <p className="mt-3 text-sm text-t-secondary">
           {quota.unlimited
             ? "Unlimited simulation access is active."
             : `You can launch ${quota.simulationsRemaining ?? 0} more simulation(s) before the paywall appears.`}
         </p>
       </section>
 
-      {experienceMode === "simulate" && simulation ? (
-        <section className="rounded-[1.6rem] border border-white/10 bg-[linear-gradient(180deg,rgba(20,36,54,0.84),rgba(8,14,22,0.84))] p-4">
-          <p className="text-xs uppercase tracking-[0.35em] text-cyan-200/70">
-            Replay
-          </p>
-          <h2 className="mt-2 font-display text-2xl text-white">
-            {simulation.actionLabel}
-          </h2>
-          <p className="mt-3 text-sm text-white/70">{simulation.narrative.summary}</p>
+      {experienceMode === "simulate" && simulation && (
+        <section className="rounded-panel border border-b-subtle bg-gradient-to-b from-surface-alt to-surface p-4">
+          <p className="text-[10px] uppercase tracking-[0.3em] text-accent font-mono font-medium">Replay</p>
+          <h2 className="mt-2 font-display text-xl font-semibold text-t-primary italic">{simulation.actionLabel}</h2>
+          <p className="mt-3 text-sm text-t-secondary">{simulation.narrative.summary}</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-[1.2rem] border border-white/10 bg-white/5 p-3">
-              <p className="text-xs uppercase tracking-[0.3em] text-white/40">
-                Severity
-              </p>
-              <p className="mt-2 text-sm text-white/85">{simulation.severityScore}/100</p>
+            <div className="rounded-card border border-b-subtle bg-surface-alt p-3 shadow-raised">
+              <p className="text-[10px] uppercase tracking-widest text-t-tertiary font-mono">Severity</p>
+              <p className="mt-2 text-sm font-mono text-t-primary">{simulation.severityScore}/100</p>
             </div>
-            <div className="rounded-[1.2rem] border border-white/10 bg-white/5 p-3">
-              <p className="text-xs uppercase tracking-[0.3em] text-white/40">
-                Impacted states
-              </p>
-              <p className="mt-2 text-sm text-white/85">{simulation.impacts.length}</p>
+            <div className="rounded-card border border-b-subtle bg-surface-alt p-3 shadow-raised">
+              <p className="text-[10px] uppercase tracking-widest text-t-tertiary font-mono">Impacted states</p>
+              <p className="mt-2 text-sm font-mono text-t-primary">{simulation.impacts.length}</p>
             </div>
           </div>
           <div className="mt-4 flex flex-col gap-3 sm:flex-row">
             <button
-              className="flex-1 rounded-[1.2rem] bg-white px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-100"
+              aria-label="Copy replay link to clipboard"
+              className="flex-1 rounded-card bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:brightness-110"
               onClick={onCopyReplay}
               type="button"
             >
               Copy replay link
             </button>
             <button
-              className="rounded-[1.2rem] border border-white/10 px-4 py-3 text-center text-sm text-white/80 transition hover:border-white/25 hover:text-white"
+              aria-label="Open replay in new view"
+              className="rounded-card border border-b-subtle px-4 py-3 text-center text-sm text-t-secondary transition hover:border-b-default hover:text-t-primary"
               onClick={onOpenReplay}
               type="button"
             >
@@ -419,7 +390,7 @@ export function PlanetControlPanel({
             </button>
           </div>
         </section>
-      ) : null}
+      )}
     </aside>
   );
 }

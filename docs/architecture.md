@@ -30,6 +30,7 @@ The intelligence path is additive:
 2. The backend exposes `observed`, `forecast`, and SSE stream endpoints.
 3. The frontend renders those signals as a separate live layer on the planet.
 4. Deterministic scenario simulation remains the source of truth for replayable outcomes.
+5. The Spring Boot intelligence service also exposes `/api/intelligence/posture`, which fuses observed signals, forecast drivers, and deterministic scenario baseline severity into a decision posture for the main command center.
 
 Operational notes:
 

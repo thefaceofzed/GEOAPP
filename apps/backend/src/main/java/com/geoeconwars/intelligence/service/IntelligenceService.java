@@ -80,6 +80,24 @@ public class IntelligenceService {
         return resolveCached(forecastCache, cacheKey, () -> computeForecast(country, canonicalActionKey, resolvedHorizonDays));
     }
 
+    public IntelligenceModels.PostureView posture(
+            String countryCode,
+            String actionKey,
+            Integer limit,
+            Integer horizonDays
+    ) {
+        ensureEnabled();
+        RulesCatalog catalog = rulesCatalogLoader.activeCatalog();
+        RulesCatalog.CountryRule country = validateCountry(countryCode);
+        String canonicalActionKey = validateAction(actionKey);
+        RulesCatalog.ActionRule action = catalog.findAction(canonicalActionKey)
+                .orElseThrow(() -> new BadRequestException("Unsupported action key: " + actionKey));
+
+        IntelligenceModels.ObservedView observed = observedSignals(country.countryCode(), canonicalActionKey, limit);
+        IntelligenceModels.ForecastView forecast = forecast(country.countryCode(), canonicalActionKey, horizonDays);
+        return computePosture(country, action, canonicalActionKey, observed, forecast);
+    }
+
     private IntelligenceModels.ForecastView computeForecast(
             RulesCatalog.CountryRule country,
             String canonicalActionKey,
@@ -110,6 +128,59 @@ public class IntelligenceService {
                 confidenceScore,
                 forecastSummary(country.countryName(), canonicalActionKey, resolvedHorizonDays, riskScore, drivers),
                 drivers
+        );
+    }
+
+    private IntelligenceModels.PostureView computePosture(
+            RulesCatalog.CountryRule country,
+            RulesCatalog.ActionRule action,
+            String canonicalActionKey,
+            IntelligenceModels.ObservedView observed,
+            IntelligenceModels.ForecastView forecast
+    ) {
+        BigDecimal scenarioBaselineScore = scenarioBaselineScore(action);
+        BigDecimal leadObservedSeverity = observed.signals().isEmpty()
+                ? null
+                : observed.signals().getFirst().severityScore();
+        BigDecimal intelligenceScore = maxScore(List.of(
+                nullToZero(scenarioBaselineScore),
+                nullToZero(forecast.riskScore()),
+                nullToZero(leadObservedSeverity)
+        ));
+        BigDecimal confidenceScore = postureConfidence(observed, forecast);
+        int evidenceCount = observed.signals().size() + forecast.drivers().size();
+        String riskLabel = intelligenceScore == null ? "No reading" : riskLabel(intelligenceScore);
+        String posture = postureLabel(evidenceCount, intelligenceScore, confidenceScore, observed.signalCount());
+        String postureTone = switch (posture) {
+            case "Escalate" -> "escalate";
+            case "Watch" -> "watch";
+            case "Monitor" -> "monitor";
+            default -> "gap";
+        };
+        String freshnessLabel = freshnessLabel(resolveFreshnessTimestamp(observed, forecast));
+
+        return new IntelligenceModels.PostureView(
+                Instant.now(),
+                country.countryCode(),
+                country.countryName(),
+                canonicalActionKey,
+                action.label(),
+                posture,
+                postureTone,
+                scaleNullable(intelligenceScore),
+                scaleNullable(scenarioBaselineScore),
+                scaleNullable(confidenceScore),
+                evidenceCount,
+                observed.signalCount(),
+                forecast.drivers().size(),
+                freshnessLabel,
+                riskLabel,
+                primaryFinding(country, observed, forecast),
+                recommendedAction(posture),
+                nextSteps(evidenceCount, forecast, observed),
+                sourceCoverage(action, scenarioBaselineScore, observed, forecast, freshnessLabel),
+                observed,
+                forecast
         );
     }
 
@@ -260,6 +331,27 @@ public class IntelligenceService {
         return bounded.setScale(2, RoundingMode.HALF_UP);
     }
 
+    private BigDecimal postureConfidence(
+            IntelligenceModels.ObservedView observed,
+            IntelligenceModels.ForecastView forecast
+    ) {
+        List<BigDecimal> values = new java.util.ArrayList<>();
+        if (forecast.confidenceScore() != null && !forecast.drivers().isEmpty()) {
+            values.add(forecast.confidenceScore());
+        }
+        observed.signals().stream()
+                .limit(4)
+                .map(IntelligenceModels.ObservedSignal::confidenceScore)
+                .forEach(values::add);
+
+        if (values.isEmpty()) {
+            return null;
+        }
+
+        BigDecimal total = values.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+        return total.divide(BigDecimal.valueOf(values.size()), 2, RoundingMode.HALF_UP);
+    }
+
     private BigDecimal confidenceForSignal(SignalModels.RelevantSignalView signal) {
         BigDecimal sourceBase = signal.sourceType() == SignalSourceType.API
                 ? BigDecimal.valueOf(74)
@@ -302,6 +394,183 @@ public class IntelligenceService {
             return "Elevated";
         }
         return "Low";
+    }
+
+    private String postureLabel(
+            int evidenceCount,
+            BigDecimal intelligenceScore,
+            BigDecimal confidenceScore,
+            int signalCount
+    ) {
+        if (evidenceCount == 0) {
+            return "Coverage gap";
+        }
+        if (
+                intelligenceScore != null
+                        && confidenceScore != null
+                        && intelligenceScore.compareTo(BigDecimal.valueOf(72)) >= 0
+                        && confidenceScore.compareTo(BigDecimal.valueOf(50)) >= 0
+        ) {
+            return "Escalate";
+        }
+        if (
+                (intelligenceScore != null && intelligenceScore.compareTo(BigDecimal.valueOf(48)) >= 0)
+                        || signalCount >= 3
+        ) {
+            return "Watch";
+        }
+        return "Monitor";
+    }
+
+    private String primaryFinding(
+            RulesCatalog.CountryRule country,
+            IntelligenceModels.ObservedView observed,
+            IntelligenceModels.ForecastView forecast
+    ) {
+        if (!forecast.drivers().isEmpty()) {
+            return forecast.summary();
+        }
+        if (!observed.signals().isEmpty()) {
+            return observed.signals().getFirst().extractedSummary();
+        }
+        return "No strong live signal is currently mapped for " + country.countryName() + ".";
+    }
+
+    private String recommendedAction(String posture) {
+        return switch (posture) {
+            case "Escalate" -> "Brief stakeholders and compare adverse scenarios.";
+            case "Watch" -> "Keep this hotspot in daily review and run a deterministic scenario.";
+            case "Monitor" -> "Track evidence and save the lens if it matters to your exposure.";
+            default -> "Create a baseline scenario, then wait for stronger evidence.";
+        };
+    }
+
+    private List<String> nextSteps(
+            int evidenceCount,
+            IntelligenceModels.ForecastView forecast,
+            IntelligenceModels.ObservedView observed
+    ) {
+        java.util.ArrayList<String> steps = new java.util.ArrayList<>();
+        if (evidenceCount == 0) {
+            steps.add("Run a deterministic baseline scenario.");
+            steps.add("Save the country and action lens to the watchlist.");
+            steps.add("Recheck observed signals after the next ingestion refresh.");
+            return steps;
+        }
+
+        if (!observed.signals().isEmpty()) {
+            steps.add("Review source provenance on the lead observed signals.");
+        }
+        if (!forecast.drivers().isEmpty()) {
+            steps.add("Inspect forecast drivers before escalating the brief.");
+        }
+        steps.add("Compare this case with at least one alternative scenario.");
+        steps.add("Export a concise decision brief with confidence and limitations.");
+        return steps;
+    }
+
+    private List<IntelligenceModels.SourceCoverage> sourceCoverage(
+            RulesCatalog.ActionRule action,
+            BigDecimal scenarioBaselineScore,
+            IntelligenceModels.ObservedView observed,
+            IntelligenceModels.ForecastView forecast,
+            String freshnessLabel
+    ) {
+        return List.of(
+                new IntelligenceModels.SourceCoverage(
+                        "Observed signals",
+                        String.valueOf(observed.signalCount()),
+                        observed.signalCount() > 0
+                                ? freshnessLabel + " evidence mapped to " + action.label()
+                                : "No current signal match for this lens",
+                        observed.signalCount() > 0 ? "ready" : "missing"
+                ),
+                new IntelligenceModels.SourceCoverage(
+                        "Forecast drivers",
+                        String.valueOf(forecast.drivers().size()),
+                        forecast.drivers().isEmpty()
+                                ? "Forecast waits for enough signal coverage"
+                                : forecast.horizonDays() + "-day horizon at "
+                                        + forecast.confidenceScore().setScale(0, RoundingMode.HALF_UP).toPlainString()
+                                        + "/100 confidence",
+                        forecast.drivers().isEmpty() ? "partial" : "ready"
+                ),
+                new IntelligenceModels.SourceCoverage(
+                        "Scenario baseline",
+                        scenarioBaselineScore == null
+                                ? "n/a"
+                                : scenarioBaselineScore.setScale(0, RoundingMode.HALF_UP).toPlainString(),
+                        "Deterministic baseline from the active rules catalog",
+                        scenarioBaselineScore == null ? "missing" : "ready"
+                )
+        );
+    }
+
+    private BigDecimal scenarioBaselineScore(RulesCatalog.ActionRule action) {
+        if (action.baseSeverity() == null) {
+            return null;
+        }
+
+        BigDecimal raw = action.baseSeverity().compareTo(BigDecimal.ONE) <= 0
+                ? action.baseSeverity().multiply(BigDecimal.valueOf(100))
+                : action.baseSeverity();
+        return clampScore(raw);
+    }
+
+    private BigDecimal maxScore(List<BigDecimal> values) {
+        return values.stream()
+                .filter(value -> value != null && value.compareTo(BigDecimal.ZERO) > 0)
+                .max(BigDecimal::compareTo)
+                .orElse(null);
+    }
+
+    private BigDecimal nullToZero(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
+    }
+
+    private BigDecimal clampScore(BigDecimal value) {
+        if (value.compareTo(BigDecimal.ZERO) < 0) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        if (value.compareTo(BigDecimal.valueOf(100)) > 0) {
+            return BigDecimal.valueOf(100).setScale(2, RoundingMode.HALF_UP);
+        }
+        return value.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal scaleNullable(BigDecimal value) {
+        return value == null ? null : value.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private Instant resolveFreshnessTimestamp(
+            IntelligenceModels.ObservedView observed,
+            IntelligenceModels.ForecastView forecast
+    ) {
+        if (!observed.signals().isEmpty()) {
+            return observed.signals().getFirst().publishedAt();
+        }
+        if (!forecast.drivers().isEmpty()) {
+            return forecast.drivers().getFirst().publishedAt();
+        }
+        return null;
+    }
+
+    private String freshnessLabel(Instant value) {
+        if (value == null) {
+            return "Unknown freshness";
+        }
+
+        long ageHours = Math.max(0L, Duration.between(value, Instant.now()).toHours());
+        if (ageHours <= 6) {
+            return "Fresh";
+        }
+        if (ageHours <= 24) {
+            return "Recent";
+        }
+        if (ageHours <= 72) {
+            return "Aging";
+        }
+        return "Stale";
     }
 
     private String forecastSummary(

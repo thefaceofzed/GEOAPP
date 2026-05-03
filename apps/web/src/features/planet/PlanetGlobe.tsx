@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FeatureCollection } from "geojson";
 import { MeshPhongMaterial } from "three";
 import { tonePalette } from "./planetCatalog";
@@ -36,7 +36,7 @@ function countryTooltip(
   `;
 }
 
-export function PlanetGlobe({
+export const PlanetGlobe = memo(function PlanetGlobe({
   simulation,
   selectedCountryCode3,
   hoveredCountryCode3,
@@ -211,6 +211,118 @@ export function PlanetGlobe({
     return labels;
   }, [activeImpacts, selectedCountryCode3]);
 
+  const polygonCapColor = useCallback(
+    (country: RenderablePlanetCountry) => {
+      const impact = impactMap.get(country.cca3);
+      if (impact) return tonePalette[impact.tone].softColor;
+      if (country.cca3 === selectedCountryCode3) return "rgba(92, 210, 255, 0.36)";
+      if (country.cca3 === hoveredCountryCode3) return "rgba(255, 255, 255, 0.18)";
+      return "rgba(20, 35, 53, 0.82)";
+    },
+    [impactMap, selectedCountryCode3, hoveredCountryCode3],
+  );
+
+  const polygonSideColor = useCallback(
+    (country: RenderablePlanetCountry) => {
+      const impact = impactMap.get(country.cca3);
+      if (impact) return tonePalette[impact.tone].borderColor;
+      if (country.cca3 === selectedCountryCode3) return "rgba(95, 214, 255, 0.55)";
+      return "rgba(111, 154, 194, 0.18)";
+    },
+    [impactMap, selectedCountryCode3],
+  );
+
+  const polygonStrokeColor = useCallback(
+    (country: RenderablePlanetCountry) =>
+      country.cca3 === selectedCountryCode3
+        ? "rgba(112, 229, 255, 0.95)"
+        : "rgba(168, 196, 228, 0.14)",
+    [selectedCountryCode3],
+  );
+
+  const polygonAltitude = useCallback(
+    (country: RenderablePlanetCountry) => {
+      const impact = impactMap.get(country.cca3);
+      if (impact) return 0.015 + Math.abs(impact.score) * 0.035;
+      if (country.cca3 === selectedCountryCode3) return 0.024;
+      if (country.cca3 === hoveredCountryCode3) return 0.015;
+      return 0.004;
+    },
+    [impactMap, selectedCountryCode3, hoveredCountryCode3],
+  );
+
+  const polygonLabel = useCallback(
+    (country: RenderablePlanetCountry) => {
+      const impact = impactMap.get(country.cca3);
+      if (impact) {
+        return countryTooltip(
+          country.name,
+          tonePalette[impact.tone].label,
+          impact.detail,
+          tonePalette[impact.tone].color,
+        );
+      }
+      return countryTooltip(
+        country.name,
+        country.cca3 === selectedCountryCode3 ? "Selected" : "Country",
+        `${country.region} / ${country.subregion}`,
+        country.cca3 === selectedCountryCode3 ? "#74ebff" : "#d6e4f0",
+      );
+    },
+    [impactMap, selectedCountryCode3],
+  );
+
+  const handlePolygonHover = useCallback(
+    (polygon: object | null) =>
+      onHoverCountry?.((polygon as RenderablePlanetCountry | null)?.cca3 ?? null),
+    [onHoverCountry],
+  );
+
+  const handlePolygonClick = useCallback(
+    (polygon: object) =>
+      onSelectCountry?.((polygon as RenderablePlanetCountry).cca3),
+    [onSelectCountry],
+  );
+
+  const arcColor = useCallback(
+    (arc: (typeof activeArcs)[number]) => [
+      tonePalette[arc.tone].color,
+      "rgba(255,255,255,0.08)",
+    ],
+    [],
+  );
+
+  const arcAltitude = useCallback(
+    (arc: (typeof activeArcs)[number]) => 0.15 + (arc.delayMs % 900) / 4000,
+    [],
+  );
+
+  const arcLabel = useCallback(
+    (arc: (typeof activeArcs)[number]) =>
+      countryTooltip(
+        "Propagation line",
+        "Cross-border spillover",
+        arc.label,
+        tonePalette[arc.tone].color,
+      ),
+    [],
+  );
+
+  const ringColor = useCallback(
+    (ring: (typeof activeRings)[number]) => tonePalette[ring.tone].color,
+    [],
+  );
+
+  const labelText = useCallback(
+    (label: (typeof labelData)[number]) => label.countryName,
+    [],
+  );
+
+  const labelColor = useCallback(
+    (label: (typeof labelData)[number]) => tonePalette[label.tone].color,
+    [],
+  );
+
   const GlobeView = GlobeImpl as any;
 
   if (import.meta.env.MODE === "test") {
@@ -262,115 +374,40 @@ export function PlanetGlobe({
           atmosphereAltitude={0.18}
           polygonsData={renderableCountries}
           polygonGeoJsonGeometry="geometry"
-          polygonCapColor={(country: RenderablePlanetCountry) => {
-            const impact = impactMap.get(country.cca3);
-            if (impact) {
-              return tonePalette[impact.tone].softColor;
-            }
-            if (country.cca3 === selectedCountryCode3) {
-              return "rgba(92, 210, 255, 0.36)";
-            }
-            if (country.cca3 === hoveredCountryCode3) {
-              return "rgba(255, 255, 255, 0.18)";
-            }
-            return "rgba(20, 35, 53, 0.82)";
-          }}
-          polygonSideColor={(country: RenderablePlanetCountry) => {
-            const impact = impactMap.get(country.cca3);
-            if (impact) {
-              return tonePalette[impact.tone].borderColor;
-            }
-            if (country.cca3 === selectedCountryCode3) {
-              return "rgba(95, 214, 255, 0.55)";
-            }
-            return "rgba(111, 154, 194, 0.18)";
-          }}
-          polygonStrokeColor={(country: RenderablePlanetCountry) =>
-            country.cca3 === selectedCountryCode3
-              ? "rgba(112, 229, 255, 0.95)"
-              : "rgba(168, 196, 228, 0.14)"
-          }
-          polygonAltitude={(country: RenderablePlanetCountry) => {
-            const impact = impactMap.get(country.cca3);
-            if (impact) {
-              return 0.015 + Math.abs(impact.score) * 0.035;
-            }
-            if (country.cca3 === selectedCountryCode3) {
-              return 0.024;
-            }
-            if (country.cca3 === hoveredCountryCode3) {
-              return 0.015;
-            }
-            return 0.004;
-          }}
+          polygonCapColor={polygonCapColor}
+          polygonSideColor={polygonSideColor}
+          polygonStrokeColor={polygonStrokeColor}
+          polygonAltitude={polygonAltitude}
           polygonsTransitionDuration={850}
-          polygonLabel={(country: RenderablePlanetCountry) => {
-            const impact = impactMap.get(country.cca3);
-            if (impact) {
-              return countryTooltip(
-                country.name,
-                tonePalette[impact.tone].label,
-                impact.detail,
-                tonePalette[impact.tone].color,
-              );
-            }
-            return countryTooltip(
-              country.name,
-              country.cca3 === selectedCountryCode3 ? "Selected" : "Country",
-              `${country.region} / ${country.subregion}`,
-              country.cca3 === selectedCountryCode3 ? "#74ebff" : "#d6e4f0",
-            );
-          }}
-          onPolygonHover={
-            interactive && onHoverCountry
-              ? (polygon: object | null) =>
-                  onHoverCountry((polygon as RenderablePlanetCountry | null)?.cca3 ?? null)
-              : undefined
-          }
-          onPolygonClick={
-            interactive && onSelectCountry
-              ? (polygon: object) =>
-                  onSelectCountry((polygon as RenderablePlanetCountry).cca3)
-              : undefined
-          }
+          polygonLabel={polygonLabel}
+          onPolygonHover={interactive ? handlePolygonHover : undefined}
+          onPolygonClick={interactive ? handlePolygonClick : undefined}
           arcsData={activeArcs}
           arcStartLat="startLat"
           arcStartLng="startLng"
           arcEndLat="endLat"
           arcEndLng="endLng"
-          arcColor={(arc: (typeof activeArcs)[number]) => [
-            tonePalette[arc.tone].color,
-            "rgba(255,255,255,0.08)",
-          ]}
-          arcAltitude={(arc: (typeof activeArcs)[number]) =>
-            0.15 + (arc.delayMs % 900) / 4000
-          }
+          arcColor={arcColor}
+          arcAltitude={arcAltitude}
           arcStroke={0.45}
           arcDashLength={0.55}
           arcDashGap={0.35}
           arcDashAnimateTime="dashTimeMs"
-          arcLabel={(arc: (typeof activeArcs)[number]) =>
-            countryTooltip(
-              "Propagation line",
-              "Cross-border spillover",
-              arc.label,
-              tonePalette[arc.tone].color,
-            )
-          }
+          arcLabel={arcLabel}
           ringsData={activeRings}
           ringLat="lat"
           ringLng="lng"
           ringMaxRadius="maxRadius"
           ringPropagationSpeed="propagationSpeed"
           ringRepeatPeriod="repeatPeriod"
-          ringColor={(ring: (typeof activeRings)[number]) => tonePalette[ring.tone].color}
+          ringColor={ringColor}
           labelsData={labelData}
           labelLat="lat"
           labelLng="lng"
-          labelText={(label: (typeof labelData)[number]) => label.countryName}
+          labelText={labelText}
           labelSize={0.85}
           labelAltitude={0.04}
-          labelColor={(label: (typeof labelData)[number]) => tonePalette[label.tone].color}
+          labelColor={labelColor}
           labelDotRadius={0.26}
           labelIncludeDot
           labelsTransitionDuration={400}
@@ -378,7 +415,10 @@ export function PlanetGlobe({
         />
       )}
 
+      <div className="sr-only" role="img" aria-label="Interactive 3D globe showing geopolitical impact visualization">
+        Globe visualization. Use the country search and scenario controls to interact with this visualization.
+      </div>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/55 to-transparent" />
     </div>
   );
-}
+});

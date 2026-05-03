@@ -2,6 +2,7 @@ import type {
   ConflictActionDefinition,
   ConflictActionKey,
   ImpactTone,
+  ScenarioTemplateDefinition,
 } from "./types";
 
 export const tonePalette: Record<
@@ -94,6 +95,81 @@ export const conflictActions: ConflictActionDefinition[] = [
     accentTone: "positive",
     narrativeHint: "Alliances create localized resilience but shift gains and losses across partners and rivals.",
     backendActionKey: "alliance",
+  },
+];
+
+export const scenarioTemplates: ScenarioTemplateDefinition[] = [
+  {
+    id: "taiwan-strait",
+    title: "Taiwan Strait Crisis",
+    description: "Stress-test semiconductor supply chains, shipping routes, and US-China military escalation risk.",
+    countryCode3: "TWN",
+    actionKey: "war",
+    mode: "simulate",
+    badge: "Flashpoint",
+  },
+  {
+    id: "hormuz-closure",
+    title: "Strait of Hormuz Closure",
+    description: "Model oil transit disruption, energy price cascades, and global shipping rerouting costs.",
+    countryCode3: "IRN",
+    actionKey: "embargo",
+    mode: "forecast",
+    badge: "Energy",
+  },
+  {
+    id: "ukraine-escalation",
+    title: "Ukraine Conflict Escalation",
+    description: "Sanctions tightening, European gas supply risk, grain export disruption, and NATO response dynamics.",
+    countryCode3: "UKR",
+    actionKey: "war",
+    mode: "simulate",
+    badge: "Conflict",
+  },
+  {
+    id: "red-sea-disruption",
+    title: "Red Sea Shipping Disruption",
+    description: "Suez Canal bypass routing costs, container rate surges, and European supply chain delays.",
+    countryCode3: "YEM",
+    actionKey: "embargo",
+    mode: "observed",
+    badge: "Trade",
+  },
+  {
+    id: "iran-strike",
+    title: "Iran Military Strike",
+    description: "Oil price shock, regional contagion, Strait of Hormuz risk, and nuclear escalation scenarios.",
+    countryCode3: "IRN",
+    actionKey: "war",
+    mode: "simulate",
+    badge: "Critical",
+  },
+  {
+    id: "estonia-cyber",
+    title: "Baltic Cyber Escalation",
+    description: "Review live cyber-adjacent signals then model digital infrastructure disruption across NATO's eastern flank.",
+    countryCode3: "EST",
+    actionKey: "cyberattack",
+    mode: "observed",
+    badge: "Cyber",
+  },
+  {
+    id: "saudi-alliance",
+    title: "Gulf Alliance Buildout",
+    description: "Model stabilizing upside and second-order procurement shifts through a regional coalition case.",
+    countryCode3: "SAU",
+    actionKey: "alliance",
+    mode: "simulate",
+    badge: "Opportunity",
+  },
+  {
+    id: "china-sanctions",
+    title: "China Financial Sanctions",
+    description: "Model settlement rail constraints, capital mobility restrictions, and safe-haven asset flows.",
+    countryCode3: "CHN",
+    actionKey: "sanctions",
+    mode: "forecast",
+    badge: "Finance",
   },
 ];
 

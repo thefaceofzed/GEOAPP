@@ -63,4 +63,37 @@ public final class IntelligenceModels {
             List<ForecastDriver> drivers
     ) {
     }
+
+    public record SourceCoverage(
+            String label,
+            String value,
+            String detail,
+            String state
+    ) {
+    }
+
+    public record PostureView(
+            Instant generatedAt,
+            String countryCode,
+            String countryName,
+            String actionKey,
+            String actionLabel,
+            String posture,
+            String postureTone,
+            BigDecimal intelligenceScore,
+            BigDecimal scenarioBaselineScore,
+            BigDecimal confidenceScore,
+            int evidenceCount,
+            int signalCount,
+            int driverCount,
+            String freshnessLabel,
+            String riskLabel,
+            String primaryFinding,
+            String recommendedAction,
+            List<String> nextSteps,
+            List<SourceCoverage> sourceCoverage,
+            ObservedView observed,
+            ForecastView forecast
+    ) {
+    }
 }

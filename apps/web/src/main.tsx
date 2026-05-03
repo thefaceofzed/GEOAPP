@@ -5,6 +5,7 @@ import { registerRefreshHandler } from "./lib/api";
 import { fetchProfile, refreshSession } from "./services/authService";
 import { useSessionStore } from "./store/sessionStore";
 import App from "./app/App";
+import "./i18n";
 import "./styles/index.css";
 
 const queryClient = new QueryClient();

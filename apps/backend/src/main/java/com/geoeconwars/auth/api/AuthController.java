@@ -65,7 +65,6 @@ public class AuthController {
                 .body(new AuthResponse(
                         session.accessToken(),
                         session.subjectType().name(),
-                        session.subjectId().toString(),
                         session.planTier().name(),
                         session.role() == null ? null : session.role().name(),
                         session.email(),
@@ -94,7 +93,6 @@ public class AuthController {
     public record AuthResponse(
             String accessToken,
             String subjectType,
-            String subjectId,
             String planTier,
             String role,
             String email,

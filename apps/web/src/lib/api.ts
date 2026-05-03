@@ -1,7 +1,7 @@
 import axios from "axios";
 import { useSessionStore } from "../store/sessionStore";
 
-export const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
+export const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "";
 
 const api = axios.create({
   baseURL: `${apiBaseUrl}/api`,

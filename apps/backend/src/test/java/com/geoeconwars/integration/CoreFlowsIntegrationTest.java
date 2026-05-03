@@ -2,6 +2,7 @@ package com.geoeconwars.integration;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -242,6 +243,93 @@ class CoreFlowsIntegrationTest {
                 .andExpect(jsonPath("$.riskLabel").isNotEmpty())
                 .andExpect(jsonPath("$.drivers.length()").value(1))
                 .andExpect(jsonPath("$.drivers[0].sourceName").value("OFAC"));
+    }
+
+    @Test
+    void guestCanPersistListAndDeleteWatchlistItems() throws Exception {
+        String accessToken = createGuestAccessToken();
+
+        mockMvc.perform(post("/api/watchlist")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "countryCode": "MA",
+                                  "actionKey": "sanctions",
+                                  "preferredMode": "forecast"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.countryCode").value("MA"))
+                .andExpect(jsonPath("$.countryCode3").value("MAR"))
+                .andExpect(jsonPath("$.actionKey").value("sanctions"))
+                .andExpect(jsonPath("$.actionLabel").value("Financial Sanctions"))
+                .andExpect(jsonPath("$.preferredMode").value("forecast"));
+
+        mockMvc.perform(get("/api/watchlist")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(accessToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].countryName").value("Morocco"));
+
+        mockMvc.perform(delete("/api/watchlist/MA/sanctions")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(accessToken)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/watchlist")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(accessToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void watchlistDigestReturnsRankedMonitoringSummary() throws Exception {
+        ingestedSignalRepository.deleteAll();
+
+        IngestedSignal signal = new IngestedSignal();
+        signal.setSourceName("OFAC");
+        signal.setSourceType(SignalSourceType.API);
+        signal.setUrl("https://example.test/ofac/ma-digest");
+        signal.setPublishedAt(Instant.now());
+        signal.setCountryCodesJson("[\"MA\",\"DZ\"]");
+        signal.setTopicTagsJson("[\"sanctions\",\"trade\"]");
+        signal.setSignalType(SignalType.SANCTIONS_SIGNAL);
+        signal.setSentiment(SignalSentiment.NEGATIVE);
+        signal.setSeverityScore(BigDecimal.valueOf(92));
+        signal.setExtractedSummary("Morocco faces a renewed sanctions and compliance escalation.");
+        signal.setRawReferenceId("ofac:ma:digest");
+        signal.setDedupeHash("dedupe-ofac-ma-digest");
+        ingestedSignalRepository.save(signal);
+
+        String accessToken = createGuestAccessToken();
+
+        mockMvc.perform(post("/api/watchlist")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "countryCode": "MA",
+                                  "actionKey": "sanctions",
+                                  "preferredMode": "forecast"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/watchlist/digest")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(accessToken))
+                        .queryParam("limit", "4")
+                        .queryParam("signalLimit", "2")
+                        .queryParam("horizonDays", "14"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.trackedCount").value(1))
+                .andExpect(jsonPath("$.summary.attentionCount").isNumber())
+                .andExpect(jsonPath("$.brief").value(org.hamcrest.Matchers.containsString("Watchlist briefing")))
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].countryCode").value("MA"))
+                .andExpect(jsonPath("$.items[0].actionLabel").value("Financial Sanctions"))
+                .andExpect(jsonPath("$.items[0].signalCount").value(1))
+                .andExpect(jsonPath("$.items[0].riskLabel").isNotEmpty())
+                .andExpect(jsonPath("$.items[0].summary").value(org.hamcrest.Matchers.containsString("sanctions")));
     }
 
     private String createGuestAccessToken() throws Exception {

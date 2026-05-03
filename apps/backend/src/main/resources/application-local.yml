@@ -1,8 +1,16 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5433/geoeconwars
-    username: geoeconwars
-    password: geoeconwars
+    url: jdbc:h2:mem:geoeconwars;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=false
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+  flyway:
+    enabled: false
+  h2:
+    console:
+      enabled: true
 
 logging:
   level:
